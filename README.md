@@ -1,4 +1,4 @@
-# Noise_Plethora Firmware v1.5
+# Noise Plethora Firmware v1.5
 
 Tennsyduino >= V1.55 is neceesary
 
