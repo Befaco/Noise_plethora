@@ -1,8 +1,7 @@
-// Noise Plethora
+// Noise Plethora Pluggins
 // Copyright (c) 2021 Befaco / Jeremy Bernstein
 // Open-source software
-// Licensed under Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported
-// See LICENSE.txt for the complete license text
+// Licensed under Creative Commons CC-BY-SA v4
 
 #pragma once
 
