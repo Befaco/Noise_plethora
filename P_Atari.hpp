@@ -1,4 +1,4 @@
-// Noise Plethora Pluggins
+// Noise Plethora Plugins
 // Copyright (c) 2021 Befaco / Jeremy Bernstein
 // Open-source software
 // Licensed under Creative Commons CC-BY-SA v4
