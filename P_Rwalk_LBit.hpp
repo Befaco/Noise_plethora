@@ -1,7 +1,7 @@
 // Noise Plethora Plugins
-// Copyright (c) 2021 Befaco / Jeremy Bernstein
+// Copyright (c) 2021 Befaco / Julia Mugica / Ivan Paz
 // Open-source software
-// Licensed under Creative Commons CC-BY-SA v4e text
+// Licensed under GPL-3.0-or-later
 
 #pragma once
 
