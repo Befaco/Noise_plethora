@@ -58,6 +58,13 @@ bool wantsLoadTestMode = false;
 bool wantsUnloadTestMode = false;
 bool inTestMode = false;
 
+// Stereo mode: B mirrors A, XB=stereo width, YB=stereo movement
+bool stereoMode = false;
+float stereoLFOPhase = 0.0;
+float stereoOffset = 0.0;
+long lastClickTime = 0;
+bool waitingForDoubleClick = false;
+
 AudioProcessor processor;
 ProgramSelector program;
 
@@ -496,8 +503,19 @@ void loop() {
 #endif
       auto pinA = PluginFactory::Instance()->Create(nameA);
       processor.setA(pinA, gainA);
+
+      // Stereo: when A changes, B follows
+      if (stereoMode) {
+        state_progB_Bank = state_progA_Bank;
+        state_progB_Program = state_progA_Program;
+        program.getB().setBank(state_progA_Bank);
+        program.getB().setProgram(state_progA_Program);
+        auto pinB = PluginFactory::Instance()->Create(nameA);
+        processor.setB(pinB, gainA);
+        switchProgramB = false; // already handled
+      }
     }
-    if (switchProgramB) {
+    if (switchProgramB && !stereoMode) {
       auto nameB = program.getB().getCurrentProgramName();
       auto gainB = program.getB().getCurrentProgramGain();
 #ifdef DEBUGGING
@@ -550,12 +568,24 @@ void loop() {
       sevseg.setChars(charsToDisplay);
     }
     else {
-      float numberToDisplay = (valToDisplayA * 10) + valToDisplayB;
-      int decimalPoint = 0;
-      if (modeA) {
-        decimalPoint = 1;
+      float numberToDisplay;
+      int decimalPoint;
+      if (stereoMode) {
+        // Stereo: both digits show A's program, both dots on
+        // SevSeg: both dots on = both digits with '.' suffix
+        char stereoFull[] = "0.0.";
+        stereoFull[0] = '0' + valToDisplayA;
+        stereoFull[2] = '0' + valToDisplayA;
+        sevseg.setChars(stereoFull);
       }
-      sevseg.setNumber(numberToDisplay, decimalPoint);
+      else {
+        numberToDisplay = (valToDisplayA * 10) + valToDisplayB;
+        decimalPoint = 0;
+        if (modeA) {
+          decimalPoint = 1;
+        }
+        sevseg.setNumber(numberToDisplay, decimalPoint);
+      }
     }
   }
   // display refreshed in interrupt (displayTimer)
@@ -566,18 +596,60 @@ void loop() {
     }
     else {
       if (actionOnButtonUp) {
-        program.setMode(!program.getMode());
+        // Double-click detection for stereo mode
+        if (waitingForDoubleClick && (ms - lastClickTime < 300)) {
+          // Double-click detected — toggle stereo mode
+          stereoMode = !stereoMode;
+          waitingForDoubleClick = false;
+          if (stereoMode) {
+            // Sync B to A
+            state_progB_Bank = state_progA_Bank;
+            state_progB_Program = state_progA_Program;
+            program.getB().setBank(state_progA_Bank);
+            program.getB().setProgram(state_progA_Program);
+            auto nameB = program.getB().getCurrentProgramName();
+            auto gainB = program.getB().getCurrentProgramGain();
+            auto pinB = PluginFactory::Instance()->Create(nameB);
+            processor.setB(pinB, gainB);
+            stateTimer = ms;
+          }
+        }
+        else {
+          waitingForDoubleClick = true;
+          lastClickTime = ms;
+        }
       }
     }
     actionOnButtonUp = true;
     buttonStartTime = testModeButtonStartTime = 0;
   }
 
+  // Single click timeout — if no second click within 300ms, do normal A/B toggle
+  if (waitingForDoubleClick && (ms - lastClickTime >= 300)) {
+    waitingForDoubleClick = false;
+    if (!stereoMode) {
+      program.setMode(!program.getMode());
+    }
+  }
+
   AudioNoInterrupts();
   g_process_mode = PROCESS_MODE_A;
   processor.processA(knob_1, knob_2);
   g_process_mode = PROCESS_MODE_B;
-  processor.processB(knob_3, knob_4);
+  if (stereoMode) {
+    // Stereo: B uses A's params. XB=width, YB=movement speed.
+    // Offset applied to k2 (timbre) not k1 (pitch).
+    float width = knob_3;    // XB repurposed as stereo width
+    float speed = knob_4;    // YB repurposed as stereo movement
+    stereoLFOPhase += speed * 0.3 * 0.003; // ~3ms per loop iteration
+    if (stereoLFOPhase > 1.0) stereoLFOPhase -= 1.0;
+    stereoOffset = width * 0.4 * sin(2.0 * PI * stereoLFOPhase);
+    float stereo_k2 = constrain(knob_2 + stereoOffset, 0.0, 1.0);
+    processor.processB(knob_1, stereo_k2);
+  }
+  else {
+    processor.processB(knob_3, knob_4);
+  }
   g_process_mode = PROCESS_MODE_NONE;
   AudioInterrupts();
 }
