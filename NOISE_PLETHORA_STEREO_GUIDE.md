@@ -5,8 +5,7 @@
 ## Table of Contents
 
 - [What It Does](#what-it-does)
-- [How to Activate (VCV Rack)](#how-to-activate-vcv-rack)
-- [How to Activate (Hardware)](#how-to-activate-hardware)
+- [How to Activate](#how-to-activate)
 - [Controls in Stereo Mode](#controls-in-stereo-mode)
 - [How It Works Internally](#how-it-works-internally)
 - [State Behavior](#state-behavior)
@@ -22,16 +21,7 @@ The result: a wide stereo field from a single algorithm, where a sine LFO pans t
 
 ---
 
-## How to Activate (VCV Rack)
-
-1. **Right-click** on the Noise Plethora module
-2. Under "Stereo," check **"Stereo Mode"**
-3. Both display dots light up to confirm stereo is active
-4. To deactivate: right-click and uncheck
-
----
-
-## How to Activate (Hardware)
+## How to Activate
 
 **Double-click** the Program/Bank encoder button (two clicks within 300 ms):
 
