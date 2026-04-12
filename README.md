@@ -103,6 +103,22 @@ To specify a port manually: `make upload PORT=/dev/cu.usbmodem12345`
 - **Display**: 2x 7-segment LED
 - **Size**: 14HP Eurorack
 
+## Experimental Plugins (not compiled)
+
+The following plugins are included in the repository but **excluded from compilation** to save flash space. They are incomplete or unused variants that may be developed further in the future:
+
+| Plugin | File | Description |
+|--------|------|-------------|
+| delayPonzo | `P_delayPonzo.hpp` | Delay-based experimental algorithm |
+| Rwalk_SineFM | `P_Rwalk_SineFM.hpp` | Random walk + sine FM variant |
+| VarWave | `P_VarWave.hpp` | Variable waveform oscillator |
+| RwalkVarWave | `P_RwalkVarWave.hpp` | Random walk + variable waveform |
+| Rwalk_ModWave | `P_Rwalk_ModWave.hpp` | Random walk + modulated waveform |
+| Rwalk_WaveTwist | `P_Rwalk_WaveTwist.hpp` | Random walk + wave twist |
+| Rwalk_LBit | `P_Rwalk_LBit.hpp` | Random walk + low-bit variant |
+
+To re-enable any of these, uncomment their `#include` lines in `Banks.cpp` and add them to a bank definition in `Banks_Def.hpp`.
+
 ## Memory Usage (60 programs)
 
 | Resource | Used | Free |
@@ -110,6 +126,22 @@ To specify a port manually: `make upload PORT=/dev/cu.usbmodem12345`
 | FLASH | 329 KB | 1703 KB (83% free) |
 | RAM1 | 331 KB | 193 KB |
 | RAM2 | 65 KB | 459 KB |
+
+## EEPROM Layout
+
+State is persisted to EEPROM with a 2-second debounce after the last change. On first boot (or version mismatch), bytes 0–16 are initialized to zero.
+
+| Byte | Field | Values |
+|------|-------|--------|
+| 0 | Version tag | Current firmware version constant |
+| 1 | CV Program Everywhere | 0 = off, 1 = on |
+| 2 | Stereo Mode | 0 = off, 1 = on |
+| 3 | *(reserved)* | — |
+| 4 | Gen A bank index | 0–5 (banks A–F) |
+| 5 | Gen A program index | 0–9 |
+| 6 | Gen B bank index | 0–5 (banks A–F) |
+| 7 | Gen B program index | 0–9 |
+| 8–16 | *(reserved)* | — |
 
 ## License
 

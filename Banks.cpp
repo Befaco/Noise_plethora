@@ -45,9 +45,6 @@ int Bank::getSize() {
   return size;
 }
 
-//test plugging
-#include "P_TestPlugin.hpp"
-
 //Bank A:
 #include "P_radioOhNo.hpp"
 #include "P_Rwalk_SineFMFlange.hpp"
@@ -84,14 +81,17 @@ int Bank::getSize() {
 #include "P_Rwalk_BitCrushPW.hpp"
 #include "P_Rwalk_LFree.hpp"
 
-//Maybe Later: (Unused or incomplete)
-#include "P_Rwalk_SineFM.hpp"
-#include "P_VarWave.hpp"
-#include "P_RwalkVarWave.hpp"
-#include "P_Rwalk_ModWave.hpp"
-#include "P_Rwalk_WaveTwist.hpp"
-#include "P_Rwalk_LBit.hpp"
-#include "P_delayPonzo.hpp"
+#include "P_TestPlugin.hpp"   // hidden test mode (10s button hold)
+
+//Experimental: excluded from compilation to save flash space.
+//To re-enable, uncomment and add to a bank definition in Banks_Def.hpp.
+//#include "P_Rwalk_SineFM.hpp"
+//#include "P_VarWave.hpp"
+//#include "P_RwalkVarWave.hpp"
+//#include "P_Rwalk_ModWave.hpp"
+//#include "P_Rwalk_WaveTwist.hpp"
+//#include "P_Rwalk_LBit.hpp"
+//#include "P_delayPonzo.hpp"
 
 //Bank D: Resonant Bodies
 #include "P_CombNoise.hpp"

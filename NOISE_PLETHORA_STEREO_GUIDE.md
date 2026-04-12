@@ -118,10 +118,14 @@ The speed control has a **quadratic response** (`speed^2 * 1.5 Hz`) for fine con
 
 ### Display in Stereo Mode
 
-| View | Display | Example |
+The 7-segment display has two digits, each with a decimal dot. In stereo mode both dots light up simultaneously as the stereo indicator. Both digits mirror Generator A's current value:
+
+| View | Display | Meaning |
 |------|---------|---------|
-| Program mode | Both dots on, same program number | `3.3.` |
-| Bank mode | Both dots on, same bank letter | `A.A.` |
+| Program mode | `3.3.` | Program 3 on both generators, both dots = stereo active |
+| Bank mode | `A.A.` | Bank A on both generators, both dots = stereo active |
+
+In normal (non-stereo) mode only one dot is lit, indicating which generator (A or B) the encoder controls.
 
 ---
 
