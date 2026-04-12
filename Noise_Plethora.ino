@@ -193,7 +193,7 @@ void setup() {
   else {
     Serial.println("restoring EEPROM values");
     state_progCVProgramEverywhere  = EEPROM.read(1);
-    // leave some space, maybe we need some flags for something
+    stereoMode                     = EEPROM.read(2);
     state_progA_Bank      = EEPROM.read(4);
     state_progA_Program   = EEPROM.read(5);
     program.getA().setBank(state_progA_Bank);
@@ -203,6 +203,15 @@ void setup() {
     state_progB_Program   = EEPROM.read(7);
     program.getB().setBank(state_progB_Bank);
     program.getB().setProgram(state_progB_Program);
+  }
+
+  if (stereoMode) {
+    // Restore stereo state: sync B to A, force A mode
+    program.setMode(PROG_A);
+    state_progB_Bank = state_progA_Bank;
+    state_progB_Program = state_progA_Program;
+    program.getB().setBank(state_progA_Bank);
+    program.getB().setProgram(state_progA_Program);
   }
 
   auto nameA = program.getA().getCurrentProgramName();
@@ -376,6 +385,7 @@ void loop() {
   if (!inTestMode && stateTimer && ms - stateTimer > 2000) {
     Serial.println("writing EEPROM");
     EEPROM.write(1, state_progCVProgramEverywhere);
+    EEPROM.write(2, stereoMode);
     EEPROM.write(4, state_progA_Bank);
     EEPROM.write(5, state_progA_Program);
     EEPROM.write(6, state_progB_Bank);
