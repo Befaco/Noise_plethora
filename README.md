@@ -5,7 +5,7 @@ Extended firmware for the [Befaco Noise Plethora](https://www.befaco.org/noise-p
 ## What's New
 
 - **30 new algorithms** across 3 additional banks (D, E, F) — total: 60 programs in 6 banks
-- **Stereo mode** — both generators run the same algorithm with timbral decorrelation
+- **Stereo mode** — both generators run the same algorithm with real L/R amplitude panning
 - **Makefile** for easy build and flash via `arduino-cli`
 
 See [NOISE_PLETHORA_PLUGIN_GUIDE.md](NOISE_PLETHORA_PLUGIN_GUIDE.md) for detailed documentation of all 60 algorithms.  
@@ -25,7 +25,40 @@ See [NOISE_PLETHORA_STEREO_GUIDE.md](NOISE_PLETHORA_STEREO_GUIDE.md) for stereo 
 
 ## Stereo Mode
 
-Double-click the encoder to toggle. Both generators run the same algorithm, with XB controlling stereo width and YB controlling stereo movement. Both display dots light up when active. Double-click again to exit.
+**Toggle:** Double-click the encoder button (two clicks within 300 ms).
+
+When active, both generators (A and B) run the same algorithm. The sound is panned between left and right outputs using an LFO that modulates the amplitude of each channel.
+
+### Controls in Stereo Mode
+
+| Control | Function | Range |
+|---------|----------|-------|
+| **XA** (knob 1) | Pitch / frequency | 0.0 – 1.0 (same as normal mode) |
+| **YA** (knob 2) | Timbre / parameter | 0.0 – 1.0 (same as normal mode) |
+| **XB** (knob 3) | **Pan width** | 0.0 (mono, centered) – 1.0 (full L/R swing) |
+| **YB** (knob 4) | **Pan LFO speed** | 0.0 (static) – 1.5 Hz max (quadratic response) |
+| **Encoder** | Change program/bank | Changes A, B follows automatically |
+| **Single click** | Disabled | A/B toggle is locked in stereo |
+| **Hold >400 ms** | Enter/exit bank mode | Works normally |
+| **Double-click** | Exit stereo mode | Restores B to its previous program |
+
+### Panning Details
+
+- **Method:** Amplitude modulation — `gainL = (1 - pan) / 2`, `gainR = (1 + pan) / 2`
+- **LFO shape:** Sine wave
+- **LFO rate:** Quadratic response (`speed² × 1.5`), time-based (independent of loop speed)
+- **Pan range:** At width = 1.0 the signal sweeps from full-left to full-right
+- **At width = 0:** Both channels equal volume (mono-compatible)
+
+### Display
+
+- **Program mode + stereo:** Both decimal dots on, both digits show A's program number (e.g., `3.3.`)
+- **Bank mode + stereo:** Both decimal dots on, both digits show A's bank letter (e.g., `A.A.`)
+
+### State Behavior
+
+- **Entering stereo:** Saves B's current bank, program, and A/B selection. Syncs B to A. Forces encoder to control A. Auto-exits bank mode.
+- **Exiting stereo:** Restores B's saved bank and program. Restores previous A/B selection. Resets gains to unity (1.0, 1.0).
 
 ## Build & Flash
 
