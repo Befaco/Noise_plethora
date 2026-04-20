@@ -10,7 +10,7 @@
 #include <memory>
 
 static const int programsPerBank = 10;
-static const int numBanks = 5;
+static const int numBanks = 6;
 
 struct Bank {
 

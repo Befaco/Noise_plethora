@@ -73,6 +73,11 @@ public:
     }
   }
 
+  void setGains(float gainL, float gainR) {
+    ampA.gain(gainL);
+    ampB.gain(gainR);
+  }
+
   void setA(std::unique_ptr<Plugin>& pin, float gain = 1.0) {
     if (!pin) return;
     AudioNoInterrupts();

@@ -58,6 +58,17 @@ bool wantsLoadTestMode = false;
 bool wantsUnloadTestMode = false;
 bool inTestMode = false;
 
+// Stereo mode: B mirrors A, XB=stereo width, YB=stereo movement
+bool stereoMode = false;
+float stereoLFOPhase = 0.0;
+float stereoOffset = 0.0;
+// Saved B state for stereo restore
+byte savedB_Bank = 0;
+byte savedB_Program = 0;
+unsigned int savedMode = PROG_A;
+long lastClickTime = 0;
+bool waitingForDoubleClick = false;
+
 AudioProcessor processor;
 ProgramSelector program;
 
@@ -182,7 +193,7 @@ void setup() {
   else {
     Serial.println("restoring EEPROM values");
     state_progCVProgramEverywhere  = EEPROM.read(1);
-    // leave some space, maybe we need some flags for something
+    stereoMode                     = EEPROM.read(2);
     state_progA_Bank      = EEPROM.read(4);
     state_progA_Program   = EEPROM.read(5);
     program.getA().setBank(state_progA_Bank);
@@ -192,6 +203,15 @@ void setup() {
     state_progB_Program   = EEPROM.read(7);
     program.getB().setBank(state_progB_Bank);
     program.getB().setProgram(state_progB_Program);
+  }
+
+  if (stereoMode) {
+    // Restore stereo state: sync B to A, force A mode
+    program.setMode(PROG_A);
+    state_progB_Bank = state_progA_Bank;
+    state_progB_Program = state_progA_Program;
+    program.getB().setBank(state_progA_Bank);
+    program.getB().setProgram(state_progA_Program);
   }
 
   auto nameA = program.getA().getCurrentProgramName();
@@ -365,6 +385,7 @@ void loop() {
   if (!inTestMode && stateTimer && ms - stateTimer > 2000) {
     Serial.println("writing EEPROM");
     EEPROM.write(1, state_progCVProgramEverywhere);
+    EEPROM.write(2, stereoMode);
     EEPROM.write(4, state_progA_Bank);
     EEPROM.write(5, state_progA_Program);
     EEPROM.write(6, state_progB_Bank);
@@ -496,8 +517,19 @@ void loop() {
 #endif
       auto pinA = PluginFactory::Instance()->Create(nameA);
       processor.setA(pinA, gainA);
+
+      // Stereo: when A changes, B follows
+      if (stereoMode) {
+        state_progB_Bank = state_progA_Bank;
+        state_progB_Program = state_progA_Program;
+        program.getB().setBank(state_progA_Bank);
+        program.getB().setProgram(state_progA_Program);
+        auto pinB = PluginFactory::Instance()->Create(nameA);
+        processor.setB(pinB, gainA);
+        switchProgramB = false; // already handled
+      }
     }
-    if (switchProgramB) {
+    if (switchProgramB && !stereoMode) {
       auto nameB = program.getB().getCurrentProgramName();
       auto gainB = program.getB().getCurrentProgramGain();
 #ifdef DEBUGGING
@@ -543,19 +575,40 @@ void loop() {
     }
     if (inBankMode) {
       static char charset[] = "AbCdEFHIJLnoPrSUYZ";
-      char charsToDisplay[] = "A.A";
-      charsToDisplay[0] = charset[valToDisplayA];
-      charsToDisplay[1] = (modeA) ? '.' : charset[valToDisplayB];
-      charsToDisplay[2] = (modeA) ? charset[valToDisplayB] : '.';
-      sevseg.setChars(charsToDisplay);
+      if (stereoMode) {
+        // Both dots on to indicate stereo
+        char charsToDisplay[] = "A.A.";
+        charsToDisplay[0] = charset[valToDisplayA];
+        charsToDisplay[2] = charset[valToDisplayA];
+        sevseg.setChars(charsToDisplay);
+      }
+      else {
+        char charsToDisplay[] = "A.A";
+        charsToDisplay[0] = charset[valToDisplayA];
+        charsToDisplay[1] = (modeA) ? '.' : charset[valToDisplayB];
+        charsToDisplay[2] = (modeA) ? charset[valToDisplayB] : '.';
+        sevseg.setChars(charsToDisplay);
+      }
     }
     else {
-      float numberToDisplay = (valToDisplayA * 10) + valToDisplayB;
-      int decimalPoint = 0;
-      if (modeA) {
-        decimalPoint = 1;
+      float numberToDisplay;
+      int decimalPoint;
+      if (stereoMode) {
+        // Stereo: both digits show A's program, both dots on
+        // SevSeg: both dots on = both digits with '.' suffix
+        char stereoFull[] = "0.0.";
+        stereoFull[0] = '0' + valToDisplayA;
+        stereoFull[2] = '0' + valToDisplayA;
+        sevseg.setChars(stereoFull);
       }
-      sevseg.setNumber(numberToDisplay, decimalPoint);
+      else {
+        numberToDisplay = (valToDisplayA * 10) + valToDisplayB;
+        decimalPoint = 0;
+        if (modeA) {
+          decimalPoint = 1;
+        }
+        sevseg.setNumber(numberToDisplay, decimalPoint);
+      }
     }
   }
   // display refreshed in interrupt (displayTimer)
@@ -566,18 +619,88 @@ void loop() {
     }
     else {
       if (actionOnButtonUp) {
-        program.setMode(!program.getMode());
+        // Double-click detection for stereo mode
+        if (waitingForDoubleClick && (ms - lastClickTime < 300)) {
+          // Double-click detected — toggle stereo mode
+          stereoMode = !stereoMode;
+          waitingForDoubleClick = false;
+          if (stereoMode) {
+            // Exit bank mode so stereo indicator is visible
+            inBankMode = false;
+            digitalWrite(ledPinBANK, LOW);
+            // Force A mode so encoder always controls A (B follows)
+            savedMode = program.getMode();
+            program.setMode(PROG_A);
+            // Save B state, then sync B to A
+            savedB_Bank = state_progB_Bank;
+            savedB_Program = state_progB_Program;
+            state_progB_Bank = state_progA_Bank;
+            state_progB_Program = state_progA_Program;
+            program.getB().setBank(state_progA_Bank);
+            program.getB().setProgram(state_progA_Program);
+            auto nameB = program.getB().getCurrentProgramName();
+            auto gainB = program.getB().getCurrentProgramGain();
+            auto pinB = PluginFactory::Instance()->Create(nameB);
+            processor.setB(pinB, gainB);
+            stateTimer = ms;
+          }
+          else {
+            // Restore gains, A/B mode, and B to its previous program
+            processor.setGains(1.0, 1.0);
+            program.setMode(savedMode);
+            state_progB_Bank = savedB_Bank;
+            state_progB_Program = savedB_Program;
+            program.getB().setBank(savedB_Bank);
+            program.getB().setProgram(savedB_Program);
+            auto nameB = program.getB().getCurrentProgramName();
+            auto gainB = program.getB().getCurrentProgramGain();
+            auto pinB = PluginFactory::Instance()->Create(nameB);
+            processor.setB(pinB, gainB);
+            stateTimer = ms;
+          }
+        }
+        else {
+          waitingForDoubleClick = true;
+          lastClickTime = ms;
+        }
       }
     }
     actionOnButtonUp = true;
     buttonStartTime = testModeButtonStartTime = 0;
   }
 
+  // Single click timeout — if no second click within 300ms, do normal A/B toggle
+  if (waitingForDoubleClick && (ms - lastClickTime >= 300)) {
+    waitingForDoubleClick = false;
+    if (!stereoMode) {
+      program.setMode(!program.getMode());
+    }
+  }
+
   AudioNoInterrupts();
   g_process_mode = PROCESS_MODE_A;
   processor.processA(knob_1, knob_2);
   g_process_mode = PROCESS_MODE_B;
-  processor.processB(knob_3, knob_4);
+  if (stereoMode) {
+    // Stereo: B mirrors A's params. XB=pan width, YB=pan speed.
+    // Real L/R panning via amplitude modulation.
+    float width = knob_3;    // XB repurposed as stereo pan width
+    float speed = knob_4;    // YB repurposed as stereo pan speed
+    static unsigned long lastStereoMs = 0;
+    float dt = (ms - lastStereoMs) * 0.001f; // seconds
+    lastStereoMs = ms;
+    if (dt > 0.1f) dt = 0.1f; // cap for first iteration
+    stereoLFOPhase += speed * speed * 1.5f * dt; // quadratic: max 1.5 Hz
+    if (stereoLFOPhase > 1.0) stereoLFOPhase -= 1.0;
+    float pan = width * sin(2.0 * PI * stereoLFOPhase); // -1..+1
+    float gainL = constrain(1.0 - pan, 0.0, 2.0) * 0.5;
+    float gainR = constrain(1.0 + pan, 0.0, 2.0) * 0.5;
+    processor.setGains(gainL, gainR);
+    processor.processB(knob_1, knob_2);
+  }
+  else {
+    processor.processB(knob_3, knob_4);
+  }
   g_process_mode = PROCESS_MODE_NONE;
   AudioInterrupts();
 }
